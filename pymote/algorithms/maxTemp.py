@@ -1,43 +1,27 @@
-'''
-INICIJALNO, JEDNOM:
-1) Traversal -  DF*:
-	- initiator šalje upit "koja je max temp" - token sadrzi upit
-	- svaki cvor koji primi zapise vlastitu temperaturu u tmax i pita dalje svoje susjede
-	- kada dodje do zadnjeg cvora (koji vise nema susjeda za proslijediti poruku), on vraca svoju tmax senderu
-	- ako je primljena tmax veca od moje, zapisi primljenu kao tmax
-	- tmax se vracaju do initiatora
-2) Flood:
-	- initiator šalje tmax svim cvorovima
-
-LOOP:
-3) Ako neki cvor ocita t vecu od tmax, salje flood 
-'''
-
-
-from pymote.algorithms.broadcast import Flood
+from pymote.algorithm import NodeAlgorithm
 from pymote.message import Message
 
 
-net_gen = NetworkGenerator(100) 
-net = net_gen.generate_random_network()
-#net.nodes.memory = myTemp, maxTemp
-
 #based on DF*
-#u token dodati zahtjev za temp
-#u return message dodati tmax
-#kada primi return message, usporediti primljeni tmax s vlastitim, promijeniti po potrebi
 
+#
+#
+#
+#OBRISI IZ SOURCEA
+#
+#
+#
+#
 
-class Traversal(NodeAlgorithm):
-    required_params = ('myTemp', 'maxTemp')
-    default_params = {'neighborsKey': 'Neighbors'}
+class MaxTemp(NodeAlgorithm):
+    required_params = ()
+    default_params = {'neighborsKey': 'Neighbors', 'myTempKey': 'Temp', 'maxTempKey': 'MaxTemp'}
 
     def initializer(self):
         for node in self.network.nodes():
-            node.memory[self.neighborsKey] = \
-                node.compositeSensor.read()['Neighbors']
-            #node.memory[self.myTemp] = node.TEMPSENSOR.read('__')
-            #node.memory[self.maxTemp] = node.myTemp
+            node.memory[self.neighborsKey] = node.compositeSensor.read()['Neighbors']
+            node.memory[self.myTempKey] = node.compositeSensor.read()['Temperature']
+            node.memory[self.maxTempKey] = node.memory[self.myTempKey]
             node.status = 'IDLE'
         ini_node = self.network.nodes()[0]
         ini_node.status = 'INITIATOR'
@@ -67,6 +51,7 @@ class Traversal(NodeAlgorithm):
             node.memory['unvisited'] = list(node.memory[self.neighborsKey])
             node.memory['unvisited'].remove(message.source)
             node.status = 'AVAILABLE'
+            # maxTemp = max (temp_mine i temp_received)
 
     def available(self, node, message):
         if message.header == 'T':
@@ -74,6 +59,7 @@ class Traversal(NodeAlgorithm):
 
         if message.header == 'Visited':
             node.memory['unvisited'].remove(message.source)
+            # maxTemp = max (temp_mine i temp_received)
 
     def visited(self, node, message):
         if message.header == 'T':
@@ -88,6 +74,7 @@ class Traversal(NodeAlgorithm):
                 self.visit(node, message)
 
         if message.header == 'Return':
+            node.memory[self.maxTempKey] = max(node.memory[self.maxTempKey], message.data)
             self.visit(node, message)
 
     def done(self, node, message):
@@ -112,7 +99,8 @@ class Traversal(NodeAlgorithm):
             node.status = 'VISITED'
         else:
             node.send(Message(header='Return',
-                              destination=node.memory['entry']))
+                              destination=node.memory['entry'], 
+                              data=node.memory[self.maxTempKey]))
             node.send(Message(header='Visited',
                               destination=set(node.memory[self.neighborsKey]) -
                               set([node.memory['entry']])))
@@ -125,8 +113,10 @@ class Traversal(NodeAlgorithm):
                               destination=node.memory['next']))
         else:
             if not node.memory['initiator']:
+
                 node.send(Message(header='Return',
-                                  destination=node.memory['entry']))
+                                  destination=node.memory['entry'], 
+                                  data=node.memory[self.maxTempKey]))
             node.status = 'DONE'
 
     STATUS = {
@@ -136,4 +126,3 @@ class Traversal(NodeAlgorithm):
         'VISITED': visited,
         'DONE': done,
     }
-
