@@ -4,15 +4,6 @@ from pymote.message import Message
 
 #based on DF*
 
-#
-#
-#
-#OBRISI IZ SOURCEA
-#
-#
-#
-#
-
 class MaxTemp(NodeAlgorithm):
     required_params = ()
     default_params = {'neighborsKey': 'Neighbors', 'myTempKey': 'Temp', 'maxTempKey': 'MaxTemp'}
@@ -30,7 +21,7 @@ class MaxTemp(NodeAlgorithm):
 
     def initiator(self, node, message):
         if message.header == NodeAlgorithm.INI:
-            node.memory['initiator'] = True
+            node.memory['entry'] = None
             node.memory['unvisited'] = list(node.memory[self.neighborsKey])
             node.memory['next'] = node.memory['unvisited'].pop()
             if (node.memory['unvisited']):
@@ -51,7 +42,6 @@ class MaxTemp(NodeAlgorithm):
             node.memory['unvisited'] = list(node.memory[self.neighborsKey])
             node.memory['unvisited'].remove(message.source)
             node.status = 'AVAILABLE'
-            # maxTemp = max (temp_mine i temp_received)
 
     def available(self, node, message):
         if message.header == 'T':
@@ -59,7 +49,6 @@ class MaxTemp(NodeAlgorithm):
 
         if message.header == 'Visited':
             node.memory['unvisited'].remove(message.source)
-            # maxTemp = max (temp_mine i temp_received)
 
     def visited(self, node, message):
         if message.header == 'T':
@@ -81,8 +70,7 @@ class MaxTemp(NodeAlgorithm):
         pass
 
     def first_visit(self, node, message):
-        # TODO: initiator is redundant - it can be deduced from entry==None
-        node.memory['initiator'] = False  
+        # TODO: initiator is redundant - it can be deduced from entry==None 
         node.memory['entry'] = message.source
         try:
             node.memory['unvisited'].remove(message.source)
@@ -112,8 +100,7 @@ class MaxTemp(NodeAlgorithm):
             node.send(Message(header='T',
                               destination=node.memory['next']))
         else:
-            if not node.memory['initiator']:
-
+            if node.memory['entry'] != None:
                 node.send(Message(header='Return',
                                   destination=node.memory['entry'], 
                                   data=node.memory[self.maxTempKey]))
