@@ -3,7 +3,6 @@ from pymote.message import Message
 
 
 #based on DF*
-
 class MaxTemp(NodeAlgorithm):
     required_params = ()
     default_params = {'neighborsKey': 'Neighbors', 'myTempKey': 'Temp', 'maxTempKey': 'MaxTemp'}
@@ -70,7 +69,6 @@ class MaxTemp(NodeAlgorithm):
         pass
 
     def first_visit(self, node, message):
-        # TODO: initiator is redundant - it can be deduced from entry==None 
         node.memory['entry'] = message.source
         try:
             node.memory['unvisited'].remove(message.source)
