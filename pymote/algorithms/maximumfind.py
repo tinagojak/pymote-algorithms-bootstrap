@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
-from pymote.sensor import TempSensor
+from pymote.sensor import Sensor
 from pymote.algorithms.saturation import Saturation
 from pymote.message import Message
+import random
+
+class TempSensor(Sensor):
+
+    """Provides measured temperature on node."""
+
+    def read(self, node):
+        '''return {'Temperature': round(random.uniform(0, 100), 2)}'''
+        return {'Temperature': round(random.uniform(0, 100), 2)}
 
 
 class MaxFind(Saturation):
@@ -9,27 +18,28 @@ class MaxFind(Saturation):
     default_params = {'temperatureKey':'Temperature','maxKey':'Max'}
 
     def processing(self,node,message):
-        if message.header=="M":
-            self.process_message(node,message)
-            #node.status = 'SATURATED'
-            self.resolve(node)
+        # if message.header=="M":
+        #     self.process_message(node,message)
+        #     #node.status = 'SATURATED'
+        #     self.resolve(node)
+        Saturation.processing(self, node, message)
             
         if message.header=="Notification":
-            destination_nodes = node.memory[self.neighborsKey]
-            print destination_nodes
-            print node.memory[self.parentKey]
-            print type(node.memory[self.parentKey])
-            print node.memory[self.parentKey][0]
+            self.resolve(node, message)
+
+            # destination_nodes = list(node.memory[self.neighborsKey])
+           
+            # self.process_message(node,message)
+            # destination_nodes.remove(node.memory[self.parentKey])            
+           
             
-            self.process_message(node,message)
-            destination_nodes.remove(node.memory[self.parentKey][0])            
+            # node.send(Message(header='Notification', data=node.memory[self.maxKey], destination=destination_nodes))
             
-            node.send(Message(header='Notification', data=node.memory[self.maxKey], destination=destination_nodes))
-            
-            if node.memory[self.temperatureKey]==message.data:
-                node.status="MAXIMUM"
-            else:
-                node.status="SMALLER"
+            # #if node.memory[self.temperatureKey]==message.data:
+            # if node.memory[self.temperatureKey] == node.memory[self.maxKey]:
+            #     node.status="MAX"
+            # else:
+            #     node.status="LOWER"
     
     def initialize(self, node):
         node.compositeSensor=(TempSensor,'Temperature')
@@ -43,31 +53,31 @@ class MaxFind(Saturation):
         if message.data>node.memory[self.maxKey]:
             node.memory[self.maxKey] = message.data
     
-    def resolve(self,node):
-        print "TU SAM"
-        destination_nodes = node.memory[self.neighborsKey]
-        destination_nodes.remove(node.memory[self.parentKey][0]) #garantira topologiju        
+    def resolve(self,node, message):
         
-        node.send(Message(header='Notification', data=node.memory[self.maxKey], destination=destination_nodes))        
+        destination_nodes = list(node.memory[self.neighborsKey])
+        destination_nodes.remove(node.memory[self.parentKey]) #garantira topologiju 
 
+        self.process_message(node, message)
+        node.send(Message(header='Notification', data=node.memory[self.maxKey], destination=destination_nodes))        
+        print ('DATA', node.memory[self.maxKey])
         if node.memory[self.temperatureKey] == node.memory[self.maxKey]:
-            node.status='MAXIMUM'
+            node.status='MAX'
         else :
-            node.status='SMALLER'
+            node.status='LOWER'
     
                                                  
-    def mini(self,node,message):
-        print "MAXIMUM"
-    def larger(self,node,message):
-        print "SMALLER"
+    def maximum(self,node,message):
+        pass
+    def lower(self,node,message):
+        pass
     
     STATUS = {
-              'MAXIMUM' : mini,
-              'SMALLER' : larger,
+              'MAX' : maximum,
+              'LOWER' : lower,
               'AVAILABLE': Saturation.STATUS.get('AVAILABLE'),
               'ACTIVE': Saturation.STATUS.get('ACTIVE'),
-              #'PROCESSING':Saturation.STATUS.get('PROCESSING'), #redefinirali smo processing
-              'PROCESSING':processing, #redefinirali smo processing
-              #'SATURATED':Saturation.STATUS.get('SATURATED'),
-              'SATURATED':resolve,
+              #'PROCESSING':Saturation.STATUS.get('PROCESSING'), #staje u saturated
+              'PROCESSING': processing, #ide u maximum/lower
+              'SATURATED': Saturation.STATUS.get('SATURATED'),
     }
