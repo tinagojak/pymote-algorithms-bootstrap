@@ -6,7 +6,7 @@ from pymote.algorithms.eccentricities import Eccentricities
 from pymote.simulation import Simulation
 from networkx import minimum_spanning_tree
 
-net_gen = NetworkGenerator(9)
+net_gen = NetworkGenerator(50)
 net = net_gen.generate_random_network()
 #net.show()
 graph_tree = minimum_spanning_tree(net)
